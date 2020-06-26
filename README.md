@@ -1,3 +1,5 @@
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 # Introduction
 
 A PHP Class for the Serbian JMBG Number (Unique Master Citizen Number, Jedinstveni matični broj građana).
@@ -16,3 +18,5 @@ $jmbg->validate();
 //var_dump($jmbg->getParsed("json"));
 var_dump($jmbg->getParsed());
 ```
+
+
