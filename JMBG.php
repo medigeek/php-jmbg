@@ -167,9 +167,9 @@ class JMBG {
     /**
      * Validate JMBG number
      */
-    public function getParsed()
+    public function getParsed(string $returntype = "array")
     {
-        var_dump($this->Person->getAll());
+        return $this->Person->getAll($returntype);
     }
     
     /**
