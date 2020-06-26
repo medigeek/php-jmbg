@@ -1,0 +1,13 @@
+{
+    "name": "medigeek/jmbg",
+    "description": "A PHP Class for the Serbian JMBG Number (Unique Master Citizen Number, Jedinstveni matični broj građa",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Savvas Radevic",
+            "email": "sradevic@gmail.com"
+        }
+    ],
+    "require": {}
+}
