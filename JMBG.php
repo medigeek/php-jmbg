@@ -1,5 +1,4 @@
 <?php
-
 namespace MediGeek;
 
 /**
@@ -7,11 +6,81 @@ namespace MediGeek;
  * https://www.paragraf.rs/propisi/zakon-o-jedinstvenom-maticnom-broju-gradjana.html
  */
 
+
+class Person {
+    private string $JMBGNumber;
+    private array $JMBGNumberArrayOfCharacters;
+    private string $DayOfBirth;
+    private string $MonthOfBirth;
+    private string $YearOfBirthLastThreeDigits;
+    private string $RegistrationAreaNumber;
+    private string $RegistrationArea;
+    private string $BirthSerialNumber;
+    private string $BirthSerialNumberDescriptive;
+    private string $Sex;
+    private string $ControlNumber;
+    private string $YearOfBirthAssumed;
+    private string $DateOfBirthAssumed;
+    private bool $DateOfBirthAssumedValidDate;
+    private int $ControlNumberCalculated;
+    private bool $ControlNumberMatch;
+    
+    public function get(string $key, string $returntype = "array") {
+        
+        $tmpString = $this->$key;
+        
+        if ($returntype == "array") {
+            return $tmpString;
+        }
+        elseif ($returntype == "json") {
+            $jsonArray = json_encode($tmpString);
+        }
+    }
+    
+    public function set(string $key, $value) {
+        $this->$key = $value;
+        return true;
+    }
+    
+    public function getMultiple(array $keys, string $returntype = "array") {
+        $tmpArray = [];
+        foreach ($keys as $key) {
+            $tmpArray[] = $this->$key;
+        }
+        
+        if ($returntype == "array") {
+            return $tmpArray;
+        }
+        elseif ($returntype == "json") {
+            $jsonArray = json_encode($tmpArray);
+            return $jsonArray;
+        }
+    }
+    
+    public function setMultiple(array $keyValuePairs) {
+        foreach ($keyValuePairs as $key => $value) {
+            $this->$key = $this->$value;
+        }
+        
+    }
+    
+    public function getAll(string $returntype = "array") {
+        $keyValuePairs = get_object_vars($this);
+        
+        if ($returntype == "array") {
+            return $keyValuePairs;
+        }
+        elseif ($returntype == "json") {
+            $KeyValuePairsJSON = json_encode($keyValuePairs);
+            return $KeyValuePairsJSON;
+        }
+    }
+    
+}
+
 class JMBG {
     
-    private $JMBGNumber;
-    private $JMBGNumberParsed = [];
-    private $JMBGNumberArrayOfCharacters = [];
+    private $Person;
     
     protected $RegistrationAreaNumber = [
         71 => "Beograd",
@@ -50,10 +119,10 @@ class JMBG {
      */
     public function __construct($JMBGNumber)
     {
-        //$this->validate($JMBGNumber);
-        $this->preValidate((string) $JMBGNumber);
-        $this->JMBGNumber = (string) $JMBGNumber;
-        $this->JMBGNumberArrayOfCharacters = str_split($this->JMBGNumber);
+        $this->preValidate($JMBGNumber);
+        $this->Person = new Person();
+        $this->Person->set("JMBGNumber", $JMBGNumber);
+        $this->Person->set("JMBGNumberArrayOfCharacters", str_split($JMBGNumber));
         $this->parse();
     }
     
@@ -91,11 +160,21 @@ class JMBG {
     {
         $this->validateDateOfBirth();
         $this->validateControlNumber();
-        var_dump($this->JMBGNumberParsed);
         
         return $this;
     }
     
+    /**
+     * Validate JMBG number
+     */
+    public function getParsed()
+    {
+        var_dump($this->Person->getAll());
+    }
+    
+    /**
+     * Validate Control Number
+     */
     public function validateControlNumber()
     {
         /*
@@ -104,8 +183,11 @@ class JMBG {
             % je MOD ili ostatak deljenja, a ne "/" (znak za deljenje)
             Ako je kontrolna cifra između 1 i 9, ostaje ista (L = K)
             Ako je kontrolna cifra veća od 9, postaje nula (L = 0)
+            (?? Ili matičar pomera reg broj za jedan kako bi modulo bi jednocifren?)
         */
-        $i = $this->JMBGNumberArrayOfCharacters;
+        
+        
+        $i = $this->Person->get("JMBGNumberArrayOfCharacters");
         $modulo = 11 - (
             ( 
                 7 * ($i[0]+$i[6])  + 
@@ -119,15 +201,15 @@ class JMBG {
         );
         
         if ($modulo > 9) {
-            $this->JMBGNumberParsed["ControlNumberCalculation"] = "0";
+            $this->Person->set("ControlNumberCalculated", "0");
         }
         else {
-            $this->JMBGNumberParsed["ControlNumberCalculation"] = $modulo;
+            $this->Person->set("ControlNumberCalculated", $modulo);
         }
         
-        $this->JMBGNumberParsed["ControlNumberMatch"] = (
-            $this->JMBGNumberParsed["ControlNumberCalculation"] == $this->JMBGNumberParsed["ControlNumber"]
-        );
+        $this->Person->set("ControlNumberMatch", (
+            $this->Person->get("ControlNumberCalculated") == $this->Person->get("ControlNumber")
+        ));
         
         return $this;
     }
@@ -138,41 +220,41 @@ class JMBG {
         $dateNowYear = date("Y");
         $dateNowYearTrimmedFirstInt = substr($dateNowYear, 1);
         
-        //we have the 3 last digits for YearOfBirth3digits
+        //we have the 3 last digits for YearOfBirthLastThreeDigits
         //if the 3 last digits > the current year date (i.e. 985 > 020)
         //assume the first digit is 1 (i.e. 1985)
-        if ($this->JMBGNumberParsed['YearOfBirth3digits'] > $dateNowYearTrimmedFirstInt) {
-            $this->JMBGNumberParsed['YearOfBirthAssumed'] = sprintf(
+        if ($this->Person->get("YearOfBirthLastThreeDigits") > $dateNowYearTrimmedFirstInt) {
+            $this->Person->set("YearOfBirthAssumed", sprintf(
                 '1%s',
-                $this->JMBGNumberParsed['YearOfBirth3digits']
-            );
+                $this->Person->get("YearOfBirthLastThreeDigits")
+            ));
         }
         //if the 3 last digits <= the current year date (i.e. 001 <= 020)
         //assume the first digit is 2 (i.e. 2001)
         else {
-            $this->JMBGNumberParsed['YearOfBirthAssumed'] = sprintf(
+            $this->Person->set("YearOfBirthAssumed", sprintf(
                 '2%s',
-                $this->JMBGNumberParsed['YearOfBirth3digits']
-            );
+                $this->Person->get("YearOfBirthLastThreeDigits")
+            ));
         }
         
-        $this->JMBGNumberParsed['DateOfBirthAssumed'] = sprintf(
+        $this->Person->set("DateOfBirthAssumed", sprintf(
             '%s-%s-%s',
-            $this->JMBGNumberParsed['YearOfBirthAssumed'],
-            $this->JMBGNumberParsed['MonthOfBirth'],
-            $this->JMBGNumberParsed['DayOfBirth']
-        );
+            $this->Person->get("YearOfBirthAssumed"),
+            $this->Person->get("MonthOfBirth"),
+            $this->Person->get("DayOfBirth")
+        ));
         
         if (checkdate(
-                $this->JMBGNumberParsed['MonthOfBirth'],
-                $this->JMBGNumberParsed['DayOfBirth'],
-                $this->JMBGNumberParsed['YearOfBirthAssumed']
+                $this->Person->get("MonthOfBirth"),
+                $this->Person->get("DayOfBirth"),
+                $this->Person->get("YearOfBirthAssumed")
         )) {
-            $this->JMBGNumberParsed["DateOfBirthAssumedValidDate"] = true;
+            $this->Person->set("DateOfBirthAssumedValidDate", true);
         }
         else {
             die("error Date of Birth not a valid date\n");
-            //$this->JMBGNumberParsed["DateOfBirthAssumedValidDate"] = false;
+            //$this->Person->set("DateOfBirthAssumedValidDate", true);
         }
         
         return $this;
@@ -196,44 +278,80 @@ class JMBG {
         
         //$this->parse();
         //DayOfBirth
-        $this->JMBGNumberParsed['DayOfBirth'] = substr($this->JMBGNumber, 0, 2);
+        $this->Person->set("DayOfBirth", substr($this->Person->get("JMBGNumber"), 0, 2));
         
         //MonthOfBirth
-        $this->JMBGNumberParsed['MonthOfBirth'] = substr($this->JMBGNumber, 2, 2);
+        $this->Person->set("MonthOfBirth", substr($this->Person->get("JMBGNumber"), 2, 2));
         
         //YearOfBirth
-        $this->JMBGNumberParsed['YearOfBirth3digits'] = substr($this->JMBGNumber, 4, 3);
+        $this->Person->set("YearOfBirthLastThreeDigits", substr($this->Person->get("JMBGNumber"), 4, 3));
         
         //Registration area number
-        $this->JMBGNumberParsed['RegistrationAreaNumber'] = substr($this->JMBGNumber, 7, 2);
+        $this->Person->set("RegistrationAreaNumber", substr($this->Person->get("JMBGNumber"), 7, 2));
         $this->parseRegistrationArea();
         
         //Serial number (if the baby born was the 1st, 2nd, 3rd... child that day)
         //000-499 male
         //500-999 female
-        $this->JMBGNumberParsed['SerialNumber'] = substr($this->JMBGNumber, 9, 3);
+        $this->Person->set("BirthSerialNumber", substr($this->Person->get("JMBGNumber"), 9, 3));
         
         //Sex
         $this->parseSex();
         
+        //BirthSerialNumberDescriptive
+        $this->parseBirthSerialNumber();
+        
         //Control number
-        $this->JMBGNumberParsed['ControlNumber'] = substr($this->JMBGNumber, 12, 1);
+        $this->Person->set("ControlNumber", substr($this->Person->get("JMBGNumber"), 12, 1));
         
         return $this;
+    }
+    
+    public function parseBirthSerialNumber() {
+        //Serial number (if the baby born was the 1st, 2nd, 3rd... child that day)
+        //000-499 male
+        //500-999 female
+        $sex = $this->Person->get("Sex");
+        if ($sex == "male") {
+            $number = (int) ($this->Person->get("BirthSerialNumber") + 1);
+        }
+        elseif ($sex == "female") {
+            $number = (int) ($this->Person->get("BirthSerialNumber") - 500 + 1);
+        }
+        $numberWithSuffix = $this->addOrdinalNumberSuffix($number);
+        $this->Person->set("BirthSerialNumberDescriptive", sprintf(
+            '%s %s child born on that day',
+            $numberWithSuffix,
+            $sex
+        ));
+        
+        return $this;
+    }
+    
+    public function addOrdinalNumberSuffix(int $number) {
+        if (!in_array(($number % 100), array(11,12,13))) {
+            switch ($number % 10) {
+                case 1:  return $number.'st';
+                case 2:  return $number.'nd';
+                case 3:  return $number.'rd';
+            }
+        }
+        
+        return $number.'th';
     }
     
     public function parseSex() {
         //Sex
         //000-499 male
         //500-999 female
-        if ($this->JMBGNumberParsed['SerialNumber'] >= 000 and $this->JMBGNumberParsed['SerialNumber'] <= 499) {
-            $this->JMBGNumberParsed['Sex'] = "male";
+        if ($this->Person->get("BirthSerialNumber") >= 000 and $this->Person->get("BirthSerialNumber") <= 499) {
+            $this->Person->set("Sex", "male");
         }
-        elseif ($this->JMBGNumberParsed['SerialNumber'] >= 500 and $this->JMBGNumberParsed['SerialNumber'] <= 999) {
-            $this->JMBGNumberParsed['Sex'] = "female";
+        elseif ($this->Person->get("BirthSerialNumber") >= 500 and $this->Person->get("BirthSerialNumber") <= 999) {
+            $this->Person->set("Sex", "female");
         }
         else {
-            $this->JMBGNumberParsed['Sex'] = null;
+            $this->Person->set("Sex", null);
             die("error jmbg sex number\n");
         }
         
@@ -242,8 +360,8 @@ class JMBG {
     
     public function parseRegistrationArea() {
         
-        $number = $this->JMBGNumberParsed['RegistrationAreaNumber'];
-        $this->JMBGNumberParsed['RegistrationArea'] = $this->RegistrationAreaNumber[$number];
+        $number = $this->Person->get("RegistrationAreaNumber");
+        $this->Person->set("RegistrationArea", $this->RegistrationAreaNumber[$number]);
         
         return $this;
     }
