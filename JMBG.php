@@ -34,6 +34,7 @@ class Person {
         }
         elseif ($returntype == "json") {
             $jsonArray = json_encode($tmpString);
+            return $jsonArray;
         }
     }
     
